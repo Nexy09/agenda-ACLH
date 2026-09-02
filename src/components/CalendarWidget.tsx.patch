@@ -1,0 +1,95 @@
+--- src/components/CalendarWidget.tsx
++++ src/components/CalendarWidget.tsx
+@@ -10,6 +10,8 @@
+ import { EventModal } from "./EventModal";
+ import { EventDetailsModal } from "./EventDetailsModal";
+ import { useAuth } from "@/lib/AuthContext";
++import { db } from "@/lib/firebase";
++import { collection, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
+ 
+ export function CalendarWidget() {
+   const { user } = useAuth();
+@@ -21,17 +23,12 @@
+ 
+   useEffect(() => {
+-    const loadEvents = () => {
+-      const savedEventsStr = localStorage.getItem("calendarEvents");
+-      if (savedEventsStr) {
+-        setEvents(prev => JSON.stringify(prev) === savedEventsStr ? prev : JSON.parse(savedEventsStr));
+-      } else {
+-        const initialEvents = [];
+-        setEvents(initialEvents);
+-        localStorage.setItem("calendarEvents", JSON.stringify(initialEvents));
+-      }
+-    };
+-    
+-    loadEvents();
+-    window.addEventListener("storage", loadEvents);
+-    window.addEventListener("local-storage-sync", loadEvents);
+-    return () => {
+-      window.removeEventListener("storage", loadEvents);
+-      window.removeEventListener("local-storage-sync", loadEvents);
+-    };
++    const unsub = onSnapshot(collection(db, "events"), (snapshot) => {
++      const loaded: any[] = [];
++      snapshot.forEach(doc => loaded.push({ id: doc.id, ...doc.data() }));
++      setEvents(loaded);
++    });
++    return () => unsub();
+   }, []);
+ 
+   useEffect(() => {
+     const checkMobile = () => setIsMobile(window.innerWidth < 768);
+     checkMobile();
+     window.addEventListener("resize", checkMobile);
+     return () => window.removeEventListener("resize", checkMobile);
+   }, []);
+ 
+-  // Removed sync effect since Firestore handles real-time updates natively
+-  // useEffect(() => {
+-  //   if (events.length > 0) {
+-  //     localStorage.setItem("calendarEvents", JSON.stringify(events));
+-  //     window.dispatchEvent(new Event("local-storage-sync"));
+-  //   }
+-  // }, [events]);
+ 
+   const handleDateClick = (arg: any) => {
+     setSelectedDate(arg.dateStr);
+     setEventToEdit(null);
+     setIsModalOpen(true);
+   };
+ 
+   const handleEventClick = (arg: any) => {
+     const e = events.find(ev => ev.id === arg.event.id);
+     if (e) setSelectedEvent(e);
+   };
+ 
+-  const handleAddEvent = (eventData: any) => {
++  const handleAddEvent = async (eventData: any) => {
+     if (eventToEdit) {
+-      setEvents(events.map(ev => ev.id === eventToEdit.id ? { ...ev, ...eventData } : ev));
++      await setDoc(doc(db, "events", eventToEdit.id), { ...eventToEdit, ...eventData }, { merge: true });
+     } else {
+-      setEvents([...events, { ...eventData, id: Date.now().toString() }]);
++      const newId = Date.now().toString();
++      await setDoc(doc(db, "events", newId), { ...eventData, id: newId });
+     }
+     setIsModalOpen(false);
+     setEventToEdit(null);
+   };
+ 
+-  const handleDeleteEvent = (id: string) => {
+-    setEvents(events.filter(ev => ev.id !== id));
++  const handleDeleteEvent = async (id: string) => {
++    await deleteDoc(doc(db, "events", id));
+     setSelectedEvent(null);
+   };
+ 
+-  const handleUpdateNotes = (id: string, notes: string) => {
+-    setEvents(events.map(ev => ev.id === id ? { ...ev, extendedProps: { ...ev.extendedProps, notes } } : ev));
++  const handleUpdateNotes = async (id: string, notes: string) => {
++    const event = events.find(ev => ev.id === id);
++    if (event) {
++      await setDoc(doc(db, "events", id), { ...event, extendedProps: { ...event.extendedProps, notes } }, { merge: true });
++    }
+   };
