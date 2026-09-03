@@ -172,7 +172,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getAllUsers = () => {
-    if (!realUser?.isAdmin) return [];
     return allUsers;
   };
 
