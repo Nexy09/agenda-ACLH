@@ -5,7 +5,6 @@
 import React, { useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import frLocale from "@fullcalendar/core/locales/fr";
 import { Plus } from "lucide-react";
@@ -113,13 +112,13 @@ export function CalendarWidget() {
     <>
       <div className="bg-[var(--card-bg)] rounded-[var(--radius-4xl)] p-4 sm:p-6 shadow-sm border border-[var(--border)] h-[calc(100vh-140px)] sm:h-[calc(100vh-80px)] relative overflow-hidden flex flex-col">
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView={isMobile ? "timeGridDay" : "dayGridMonth"}
+          plugins={[dayGridPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
           locale={frLocale}
           headerToolbar={{
             left: "prev,next",
             center: "title",
-            right: isMobile ? "" : "dayGridMonth,timeGridWeek",
+            right: isMobile ? "" : "today",
           }}
           events={events}
           dateClick={handleDateClick}
@@ -127,10 +126,8 @@ export function CalendarWidget() {
           height="100%"
           contentHeight="auto"
           dayMaxEvents={true}
-          nowIndicator={true}
-          slotMinTime="08:00:00"
-          slotMaxTime="20:00:00"
-          allDayText="Jour"
+          fixedWeekCount={false}
+          showNonCurrentDates={false}
         />
         
         {/* Floating Action Button for mobile */}
