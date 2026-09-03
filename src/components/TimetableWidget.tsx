@@ -137,20 +137,23 @@ export function TimetableWidget() {
           <h2 className="text-2xl font-bold">Mes Disponibilités</h2>
           <p className="text-sm opacity-70 mt-1">Sélectionnez vos créneaux de pause (par tranches d'une heure).</p>
         </div>
-        <div className="flex-1 overflow-auto p-6">
-          <div className="min-w-[600px]">
+        <div className="flex-1 overflow-auto p-2 sm:p-6">
+          <div className="w-full">
             {/* Header */}
-            <div className="grid grid-cols-6 gap-2 mb-2">
-              <div className="font-semibold text-center text-sm opacity-50">Heure</div>
+            <div className="grid grid-cols-6 gap-1 sm:gap-2 mb-2">
+              <div className="font-semibold text-center text-[10px] sm:text-sm opacity-50 flex items-center justify-center">Heure</div>
               {DAYS.map((day) => (
-                <div key={day} className="font-bold text-center bg-[var(--background)] py-2 rounded-full">{day}</div>
+                <div key={day} className="font-bold text-center bg-[var(--background)] py-2 rounded-xl sm:rounded-full text-[10px] sm:text-base">
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.substring(0, 3)}</span>
+                </div>
               ))}
             </div>
             
             {/* Grid */}
             {SLOTS.map((slot) => (
-              <div key={slot} className="grid grid-cols-6 gap-2 mb-2">
-                <div className="flex items-center justify-center text-xs font-semibold opacity-70 bg-[var(--background)] rounded-2xl py-2">
+              <div key={slot} className="grid grid-cols-6 gap-1 sm:gap-2 mb-1 sm:mb-2">
+                <div className="flex items-center justify-center text-[9px] sm:text-xs font-semibold opacity-70 bg-[var(--background)] rounded-xl sm:rounded-2xl py-1 sm:py-2 text-center leading-tight">
                   {slot.replace(" - ", "\n")}
                 </div>
                 {DAYS.map((day) => {
@@ -161,13 +164,13 @@ export function TimetableWidget() {
                       key={key}
                       onClick={() => toggleSlot(day, slot)}
                       className={clsx(
-                        "h-16 rounded-[1.25rem] border-2 transition-all active:scale-95",
+                        "h-12 sm:h-16 rounded-xl sm:rounded-[1.25rem] border sm:border-2 transition-all active:scale-95",
                         isAvailable 
                           ? "bg-[var(--primary)] border-[var(--primary)] shadow-md shadow-[var(--primary)]/20 text-[var(--primary-foreground)]" 
                           : "bg-transparent border-dashed border-[var(--border)] hover:bg-[var(--background)] hover:border-solid text-transparent"
                       )}
                     >
-                      {isAvailable && <span className="font-semibold">Libre</span>}
+                      {isAvailable && <span className="font-semibold text-xs hidden sm:inline">Libre</span>}
                     </button>
                   );
                 })}
