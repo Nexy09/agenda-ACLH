@@ -26,7 +26,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col xl:flex-row gap-6 h-full">
+    <div className="flex flex-col xl:flex-row gap-6 xl:h-full min-h-full">
       {/* Calendar Section */}
       <div className="flex-1 xl:max-w-[70%]">
         <CalendarWidget />

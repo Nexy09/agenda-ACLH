@@ -110,7 +110,7 @@ export function CalendarWidget() {
 
   return (
     <>
-      <div className="bg-[var(--card-bg)] rounded-[var(--radius-4xl)] p-4 sm:p-6 shadow-sm border border-[var(--border)] h-[calc(100vh-140px)] sm:h-[calc(100vh-80px)] relative overflow-hidden flex flex-col">
+      <div className="bg-[var(--card-bg)] rounded-[var(--radius-4xl)] p-4 sm:p-6 shadow-sm border border-[var(--border)] h-auto sm:h-[calc(100vh-80px)] relative overflow-hidden flex flex-col">
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
@@ -123,7 +123,7 @@ export function CalendarWidget() {
           events={events}
           dateClick={handleDateClick}
           eventClick={handleEventClick}
-          height="100%"
+          height={isMobile ? "auto" : "100%"}
           contentHeight="auto"
           dayMaxEvents={true}
           fixedWeekCount={false}

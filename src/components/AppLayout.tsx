@@ -134,7 +134,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Scrollable Container */}
-        <div id="scroll-container" className="flex-1 overflow-y-auto pb-32 md:pb-8 pt-16 md:pt-8 px-4 md:px-8">
+        <div id="scroll-container" className="flex-1 overflow-y-auto pb-48 md:pb-8 pt-16 md:pt-8 px-4 md:px-8">
           {/* Mobile Large Title */}
           <div className="md:hidden pt-2 pb-6 transition-all duration-300 px-2">
             <h1 className={clsx("text-4xl font-bold tracking-tight transition-opacity duration-300", isScrolled ? "opacity-0" : "opacity-100")}>
@@ -142,7 +142,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             </h1>
           </div>
           
-          <div className="h-full max-w-7xl mx-auto">
+          <div className="xl:h-full min-h-full max-w-7xl mx-auto">
             {children}
           </div>
         </div>
