@@ -40,6 +40,8 @@ interface AuthContextType {
   getAllUsers: () => UserProfile[]; // For admin
   getUserById: (id: string) => UserProfile | undefined;
   loginAsUser: (userId: string) => Promise<void>;
+  stopImpersonating: () => void;
+  isImpersonating: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -51,7 +53,8 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [realUser, setRealUser] = useState<UserProfile | null>(null);
+  const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const router = useRouter();
@@ -75,31 +78,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
           if (userDoc.exists()) {
-            setUser({ id: userDoc.id, ...userDoc.data() } as UserProfile);
+            setRealUser({ id: userDoc.id, ...userDoc.data() } as UserProfile);
           } else {
-            setUser(null);
+            setRealUser(null);
           }
         } catch (error) {
           console.error("Failed to fetch user profile:", error);
-          setUser(null);
+          setRealUser(null);
         }
       } else {
-        setUser(null);
+        setRealUser(null);
       }
       setIsLoaded(true);
     });
     return () => unsub();
   }, []);
 
+  const activeUser = impersonatedUserId 
+    ? allUsers.find(u => u.id === impersonatedUserId) || realUser 
+    : realUser;
+
   useEffect(() => {
     if (isLoaded) {
-      if (!user && pathname !== "/login") {
+      if (!activeUser && pathname !== "/login") {
         router.push("/login");
-      } else if (user && pathname === "/login") {
+      } else if (activeUser && pathname === "/login") {
         router.push("/");
       }
     }
-  }, [user, isLoaded, pathname, router]);
+  }, [activeUser, isLoaded, pathname, router]);
 
   const toEmail = (username: string) => `${username.toLowerCase()}@agenda.local`;
 
@@ -136,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAdmin
       });
 
-      setUser(newUser);
+      setRealUser(newUser);
       return true;
     } catch (e) {
       console.error(e);
@@ -145,23 +152,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    if (impersonatedUserId) {
+      setImpersonatedUserId(null);
+      return;
+    }
     await signOut(auth);
-    setUser(null);
+    setRealUser(null);
     router.push("/login");
   };
 
   const updateProfile = async (profile: Partial<UserProfile>) => {
-    if (!user) return;
+    if (!activeUser) return;
     try {
-      await updateDoc(doc(db, "users", user.id), profile);
-      setUser({ ...user, ...profile });
+      await updateDoc(doc(db, "users", activeUser.id), profile);
+      // Wait for onSnapshot to update it automatically
     } catch (e) {
       console.error(e);
     }
   };
 
   const getAllUsers = () => {
-    if (!user?.isAdmin) return [];
+    if (!realUser?.isAdmin) return [];
     return allUsers;
   };
 
@@ -170,15 +181,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginAsUser = async (userId: string) => {
-    // Firebase auth doesn't support easy "impersonation" without the password or custom tokens.
-    // We would need a Cloud Function. Since this is client-side only:
-    alert("La connexion en tant qu'un autre utilisateur nécessite une configuration serveur (Cloud Functions) sur Firebase. Cette fonctionnalité est désactivée.");
+    if (!realUser?.isAdmin) return;
+    setImpersonatedUserId(userId);
+    router.push("/");
   };
+  
+  const stopImpersonating = () => {
+    setImpersonatedUserId(null);
+    router.push("/admin");
+  }
 
   if (!isLoaded) return <div className="h-screen w-screen bg-[var(--background)] flex items-center justify-center">Chargement...</div>;
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile, getAllUsers, getUserById, loginAsUser }}>
+    <AuthContext.Provider value={{ 
+      user: activeUser, 
+      login, 
+      register, 
+      logout, 
+      updateProfile, 
+      getAllUsers, 
+      getUserById, 
+      loginAsUser,
+      stopImpersonating,
+      isImpersonating: !!impersonatedUserId 
+    }}>
       {children}
     </AuthContext.Provider>
   );

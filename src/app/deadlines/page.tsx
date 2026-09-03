@@ -32,6 +32,8 @@ export default function DeadlinesPage() {
     e.preventDefault();
     if (!newTitle || !newDate || !newTime) return;
     
+    setIsModalOpen(false);
+    
     const newId = Date.now().toString();
     const newDeadline = {
       id: newId,
@@ -41,7 +43,6 @@ export default function DeadlinesPage() {
     
     await setDoc(doc(db, "deadlines", newId), newDeadline);
     
-    setIsModalOpen(false);
     setNewTitle("");
     setNewDate("");
     setNewTime("");
@@ -77,7 +78,7 @@ export default function DeadlinesPage() {
                 <DeadlineWidget id={d.id} title={d.title} targetDate={d.targetDate} />
                 <button 
                   onClick={() => handleDelete(d.id)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                 >
                   <X size={16} />
                 </button>

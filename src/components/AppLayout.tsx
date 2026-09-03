@@ -32,7 +32,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const activeItem = navItems.find((item) => item.href === pathname) || navItems[0];
-  const { user } = useAuth(); // We need to import useAuth
+  const { user, isImpersonating, stopImpersonating } = useAuth(); // We need to import useAuth
   
   if (pathname === '/login') {
     return <div className="h-screen w-screen bg-[var(--background)] text-[var(--foreground)]">{children}</div>;
@@ -58,9 +58,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen w-full bg-[var(--background)] overflow-hidden text-[var(--foreground)] relative">
+      {isImpersonating && (
+        <div className="fixed top-0 left-0 right-0 bg-red-500 text-white p-2 text-center z-[100] text-sm font-bold flex justify-center items-center gap-4 shadow-md">
+          <span>⚠️ Vous êtes connecté en tant que {user?.firstName} {user?.lastName}</span>
+          <button onClick={stopImpersonating} className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full active:scale-95 transition-transform">
+            Quitter
+          </button>
+        </div>
+      )}
       
       {/* Floating Vertical Nav (Desktop) */}
       <nav className="hidden md:flex flex-col items-center fixed left-6 top-1/2 -translate-y-1/2 bg-[var(--card-bg)]/90 backdrop-blur-xl border border-[var(--border)] rounded-full shadow-2xl z-50 overflow-hidden">
+
         {/* Animated Background Pill */}
         <div 
           className="absolute left-0 w-full h-[84px] rounded-full bg-[var(--foreground)]/10 transition-transform duration-300 ease-[cubic-bezier(0.2,1,0.2,1)]"

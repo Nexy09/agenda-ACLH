@@ -6,6 +6,8 @@ import React, { useState, useMemo, useEffect } from "react";
 import clsx from "clsx";
 import { Users, ChevronDown, X, Phone } from "lucide-react";
 import { useAuth, UserProfile } from "@/lib/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, onSnapshot, doc, setDoc } from "firebase/firestore";
 
 const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
 const START_HOUR = 8;
@@ -26,31 +28,33 @@ interface UserAvailability {
 }
 
 export function TimetableWidget() {
-  const { user } = useAuth();
+  const { user, getAllUsers } = useAuth();
   const [myAvailableSlots, setMyAvailableSlots] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<"my_matches" | "all_groups">("my_matches");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [colleagues, setColleagues] = useState<UserAvailability[]>([]);
   const [selectedContact, setSelectedContact] = useState<UserAvailability | null>(null);
 
+  // Listen to timetables from Firestore
   useEffect(() => {
     if (!user) return;
     
-    const loadData = () => {
-      // Load my slots
-      const allSlotsStr = localStorage.getItem("timetableSlots") || "{}";
-      const allSlots = JSON.parse(allSlotsStr);
+    const unsub = onSnapshot(collection(db, "timetables"), (snapshot) => {
+      const allSlots: Record<string, string[]> = {};
+      snapshot.forEach(doc => {
+        allSlots[doc.id] = doc.data().slots || [];
+      });
       
+      // Update my slots
       setMyAvailableSlots(prev => {
+        const newArray = allSlots[user.id] || [];
         const prevArray = Array.from(prev);
-        const newArray = allSlots[user.id] || ["Lundi-12h30 - 13h30", "Mardi-12h30 - 13h30"];
-        // Only update state if different to prevent infinite loop
         if (JSON.stringify(prevArray) === JSON.stringify(newArray)) return prev;
         return new Set(newArray);
       });
 
-      // Load colleagues
-      const users: UserProfile[] = JSON.parse(localStorage.getItem("users") || "[]");
+      // Update colleagues
+      const users = getAllUsers();
       const loadedColleagues = users
         .filter(u => u.id !== user.id)
         .map(u => ({
@@ -61,40 +65,15 @@ export function TimetableWidget() {
           phoneNumber: u.phoneNumber
         }));
       
-      if (loadedColleagues.length === 0) {
-        loadedColleagues.push(
-          { userId: "mock1", name: "Alice Dupont", avatar: "AD", availableSlots: ["Lundi-12h30 - 13h30", "Mardi-10h30 - 11h30"], phoneNumber: "0601020304" },
-          { userId: "mock2", name: "Bob Martin", avatar: "BM", availableSlots: ["Lundi-12h30 - 13h30", "Jeudi-14h30 - 15h30"], phoneNumber: "0612345678" }
-        );
-      }
-      setColleagues(prev => JSON.stringify(prev) === JSON.stringify(loadedColleagues) ? prev : loadedColleagues);
-    };
+      setColleagues(loadedColleagues);
+    });
 
-    loadData();
+    return () => unsub();
+  }, [user, getAllUsers]);
 
-    window.addEventListener("storage", loadData);
-    window.addEventListener("local-storage-sync", loadData);
-    return () => {
-      window.removeEventListener("storage", loadData);
-      window.removeEventListener("local-storage-sync", loadData);
-    };
-  }, [user]);
-
-  useEffect(() => {
+  const toggleSlot = async (day: string, slot: string) => {
     if (!user) return;
-    const allSlots = JSON.parse(localStorage.getItem("timetableSlots") || "{}");
-    const currentSlotsStr = JSON.stringify(Array.from(myAvailableSlots));
-    const savedSlotsStr = JSON.stringify(allSlots[user.id] || []);
     
-    // Only save and dispatch if actually changed
-    if (currentSlotsStr !== savedSlotsStr) {
-      allSlots[user.id] = Array.from(myAvailableSlots);
-      localStorage.setItem("timetableSlots", JSON.stringify(allSlots));
-      window.dispatchEvent(new Event("local-storage-sync"));
-    }
-  }, [myAvailableSlots, user]);
-
-  const toggleSlot = (day: string, slot: string) => {
     const key = `${day}-${slot}`;
     const newSet = new Set(myAvailableSlots);
     if (newSet.has(key)) {
@@ -102,7 +81,14 @@ export function TimetableWidget() {
     } else {
       newSet.add(key);
     }
+    
+    // Optimistic UI update
     setMyAvailableSlots(newSet);
+    
+    // Save to Firestore
+    await setDoc(doc(db, "timetables", user.id), {
+      slots: Array.from(newSet)
+    });
   };
 
   const matchGroups = useMemo(() => {
@@ -301,4 +287,3 @@ export function TimetableWidget() {
     </div>
   );
 }
-
