@@ -70,11 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // fetch profile
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          setUser({ id: userDoc.id, ...userDoc.data() } as UserProfile);
-        } else {
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+          if (userDoc.exists()) {
+            setUser({ id: userDoc.id, ...userDoc.data() } as UserProfile);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user profile:", error);
           setUser(null);
         }
       } else {
