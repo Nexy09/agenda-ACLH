@@ -179,6 +179,7 @@ body {
   
   /* Remove outer borders completely */
   .fc-theme-standard th, .fc-theme-standard td {
+    background-color: transparent !important;
     border-color: color-mix(in srgb, var(--foreground) 10%, transparent) !important;
   }
   
