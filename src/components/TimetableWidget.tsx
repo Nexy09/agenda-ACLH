@@ -99,7 +99,11 @@ export function TimetableWidget() {
     myAvailableSlots.forEach((slotKey) => {
       if (!slotKey.startsWith(`${activeWeek}-`)) return;
       
-      const [, day, time] = slotKey.split("-");
+      const withoutWeek = slotKey.substring(2);
+      const dashIndex = withoutWeek.indexOf("-");
+      const day = withoutWeek.substring(0, dashIndex);
+      const time = withoutWeek.substring(dashIndex + 1);
+      
       const matchedUsers = colleagues.filter((c) => c.availableSlots.includes(slotKey));
       if (matchedUsers.length > 0) {
         groups.push({ slotKey, day, time, users: matchedUsers });
