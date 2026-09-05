@@ -34,6 +34,7 @@ export function TimetableWidget() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [colleagues, setColleagues] = useState<UserAvailability[]>([]);
   const [selectedContact, setSelectedContact] = useState<UserAvailability | null>(null);
+  const [activeWeek, setActiveWeek] = useState<"A" | "B">("A");
 
   // Listen to timetables from Firestore
   useEffect(() => {
@@ -42,7 +43,9 @@ export function TimetableWidget() {
     const unsub = onSnapshot(collection(db, "timetables"), (snapshot) => {
       const allSlots: Record<string, string[]> = {};
       snapshot.forEach(doc => {
-        allSlots[doc.id] = doc.data().slots || [];
+        const slots = doc.data().slots || [];
+        // Map legacy slots to Week A automatically
+        allSlots[doc.id] = slots.map((s: string) => s.startsWith("A-") || s.startsWith("B-") ? s : `A-${s}`);
       });
       
       // Update my slots
@@ -74,7 +77,7 @@ export function TimetableWidget() {
   const toggleSlot = async (day: string, slot: string) => {
     if (!user) return;
     
-    const key = `${day}-${slot}`;
+    const key = `${activeWeek}-${day}-${slot}`;
     const newSet = new Set(myAvailableSlots);
     if (newSet.has(key)) {
       newSet.delete(key);
@@ -94,14 +97,16 @@ export function TimetableWidget() {
   const matchGroups = useMemo(() => {
     const groups: { slotKey: string; day: string; time: string; users: UserAvailability[] }[] = [];
     myAvailableSlots.forEach((slotKey) => {
-      const [day, time] = slotKey.split("-");
+      if (!slotKey.startsWith(`${activeWeek}-`)) return;
+      
+      const [, day, time] = slotKey.split("-");
       const matchedUsers = colleagues.filter((c) => c.availableSlots.includes(slotKey));
       if (matchedUsers.length > 0) {
         groups.push({ slotKey, day, time, users: matchedUsers });
       }
     });
     return groups.sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || SLOTS.indexOf(a.time) - SLOTS.indexOf(b.time));
-  }, [myAvailableSlots, colleagues]);
+  }, [myAvailableSlots, colleagues, activeWeek]);
 
   const allGroups = useMemo(() => {
     const groups: { slotKey: string; day: string; time: string; users: UserAvailability[] }[] = [];
@@ -116,7 +121,7 @@ export function TimetableWidget() {
 
     DAYS.forEach(day => {
       SLOTS.forEach(time => {
-        const slotKey = `${day}-${time}`;
+        const slotKey = `${activeWeek}-${day}-${time}`;
         const usersInSlot = allUsers.filter(u => u.availableSlots.includes(slotKey));
         if (usersInSlot.length >= 2) {
           groups.push({ slotKey, day, time, users: usersInSlot });
@@ -125,7 +130,7 @@ export function TimetableWidget() {
     });
 
     return groups;
-  }, [myAvailableSlots, colleagues, user]);
+  }, [myAvailableSlots, colleagues, user, activeWeek]);
 
   const displayedGroups = viewMode === "my_matches" ? matchGroups : allGroups;
 
@@ -133,9 +138,25 @@ export function TimetableWidget() {
     <div className="flex flex-col xl:flex-row gap-8 h-full pb-8">
       {/* Timetable Grid */}
       <div className="flex-1 bg-[var(--card-bg)] rounded-[var(--radius-4xl)] shadow-sm border border-[var(--border)] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-[var(--border)]">
-          <h2 className="text-2xl font-bold">Mes Disponibilités</h2>
-          <p className="text-sm opacity-70 mt-1">Sélectionnez vos créneaux de pause (par tranches d'une heure).</p>
+        <div className="p-4 sm:p-6 border-b border-[var(--border)] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold">Mes Disponibilités</h2>
+            <p className="text-sm opacity-70 mt-1">Sélectionnez vos créneaux de pause.</p>
+          </div>
+          <div className="flex bg-[var(--background)] p-1 rounded-full border border-[var(--border)] self-stretch md:self-auto">
+            <button 
+              onClick={() => setActiveWeek("A")}
+              className={clsx("flex-1 md:flex-none px-6 py-2.5 font-bold rounded-full transition-all text-sm", activeWeek === "A" ? "bg-[var(--primary)] text-white shadow-sm" : "opacity-60 hover:opacity-100")}
+            >
+              Semaine A
+            </button>
+            <button 
+              onClick={() => setActiveWeek("B")}
+              className={clsx("flex-1 md:flex-none px-6 py-2.5 font-bold rounded-full transition-all text-sm", activeWeek === "B" ? "bg-[var(--primary)] text-white shadow-sm" : "opacity-60 hover:opacity-100")}
+            >
+              Semaine B
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-auto p-2 sm:p-6">
           <div className="w-full">
@@ -157,7 +178,7 @@ export function TimetableWidget() {
                   {slot.replace(" - ", "\n")}
                 </div>
                 {DAYS.map((day) => {
-                  const key = `${day}-${slot}`;
+                  const key = `${activeWeek}-${day}-${slot}`;
                   const isAvailable = myAvailableSlots.has(key);
                   return (
                     <button
@@ -217,7 +238,7 @@ export function TimetableWidget() {
         <div className="flex flex-col gap-4 overflow-y-auto">
           {displayedGroups.length === 0 ? (
             <div className="bg-[var(--card-bg)] border border-[var(--border)] p-6 rounded-[var(--radius-3xl)] text-center opacity-60">
-              {viewMode === "my_matches" ? "Aucune heure en commun avec vos collègues." : "Aucun groupe disponible."}
+              {viewMode === "my_matches" ? `Aucune heure en commun avec vos collègues en Semaine ${activeWeek}.` : `Aucun groupe disponible en Semaine ${activeWeek}.`}
             </div>
           ) : (
             displayedGroups.map((group) => (
