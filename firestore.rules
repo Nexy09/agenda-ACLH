@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Fonction réutilisable pour vérifier si l'utilisateur est connecté
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Les utilisateurs peuvent lire et écrire les profils (nécessaire pour la timetable et l'admin)
+    match /users/{userId} {
+      allow read, write: if isAuth();
+    }
+    
+    // Les événements du calendrier
+    match /events/{eventId} {
+      allow read, write: if isAuth();
+    }
+    
+    // Les emplois du temps
+    match /timetables/{userId} {
+      allow read, write: if isAuth();
+    }
+    
+    // Les deadlines
+    match /deadlines/{deadlineId} {
+      allow read, write: if isAuth();
+    }
+    
+    // Par défaut, on bloque tout le reste
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
