@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || "");
   const [classe, setClasse] = useState(user?.classe || "");
   const [isSaved, setIsSaved] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -29,6 +30,16 @@ export default function ProfilePage() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    
+    if (phoneNumber) {
+      const phoneRegex = /^0[1-9]([-. ]?[0-9]{2}){4}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setError("Le numéro de téléphone est invalide (ex: 06 12 34 56 78).");
+        return;
+      }
+    }
+
     updateProfile({ firstName, lastName, phoneNumber, classe: classe.toUpperCase() });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
@@ -46,6 +57,12 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-bold">{firstName} {lastName}</h1>
           <p className="text-sm opacity-60">@{user.username}</p>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 text-red-500 p-4 rounded-xl text-sm font-semibold mb-6">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSave} className="flex flex-col gap-6">
           <div className="flex gap-4">

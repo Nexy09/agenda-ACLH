@@ -38,6 +38,12 @@ export default function LoginPage() {
         return;
       }
 
+      const phoneRegex = /^0[1-9]([-. ]?[0-9]{2}){4}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        setError("Le numéro de téléphone est invalide (ex: 06 12 34 56 78).");
+        return;
+      }
+
       const success = await register({ username, firstName, lastName, phoneNumber, classe: classe.toUpperCase() }, password);
       if (!success) setError("Ce nom d'utilisateur est déjà pris ou invalide.");
     }
